@@ -19,8 +19,8 @@ export class AddToPlaylistScene extends Scenes.BaseScene<Scenes.SceneContext> {
         try {
             const songName: any = ctx.message;
             console.log(songName.audio);
-            if ((ctx.message.audio.file_size as number)>=(5*1024*1024)) {
-                ctx.reply('❌ Music max size is 5 MB')
+            if ((ctx.message.audio.file_size as number)>=(7*1024*1024)) {
+                ctx.reply('❌ Music max size is 7 MB')
                 return;
             }
             ctx.reply('📥 Music being saved ...')

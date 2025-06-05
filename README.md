@@ -15,11 +15,11 @@
 | Command                          | Description                               |
 |----------------------------------|-------------------------------------------|
 | `/start`                         | Start the bot                             |
-| `/search <name>`                | Search for a song by name                 |
+| `/search <name>`                 | Search for a song by name                 |
 | `/genre`                         | Browse songs by genre                     |
 | `/myplaylist`                    | View your personal playlist               |
-| `/addtoplaylist <name>`         | Add a song to your playlist               |
-| `/playlist <username>`          | View another user's playlist              |
+| `/addtoplaylist <name>`          | Add a song to your playlist               |
+| `/playlist <username>`           | View another user's playlist              |
 | `/help`                          | Show this help message                    |
 
 ## 🗃️ Database Tables
@@ -29,31 +29,33 @@ The project includes the following main tables:
 ### 1. `users`
 Stores user information.
 
-| Column       | Type        | Description         |
-|--------------|-------------|---------------------|
-| `id`         | Integer     | Primary key         |
-| `username`   | String      | Telegram username   |
-| `created_at` | Timestamp   | Registration date   |
+| Column        | Type        | Description         |
+|---------------|-------------|---------------------|
+| `id`          | Integer     | Primary key         |
+| `username`    | String      | Telegram username   |
+| `phone_number`| String      | Telegram username   |
+| `created_at`  | Timestamp   | Registration date   |
 
 ### 2. `songs`
 Stores available songs.
 
-| Column       | Type        | Description         |
-|--------------|-------------|---------------------|
-| `id`         | Integer     | Primary key         |
-| `name`       | String      | Song name           |
-| `artist`     | String      | Artist name         |
-| `genre`      | String      | Song genre          |
-| `url`        | String      | Music file URL/link |
+| Column        | Type        | Description         |
+|---------------|-------------|---------------------|
+| `id`          | Integer     | Primary key         |
+| `name`        | String      | Song name           |
+| `author`      | String      | Author name         |
+| `genre`       | String      | Song genre          |
+| `url`         | String      | Music file URL/link |
+| `uploaded_by` | String      | Upload user name    |
 
 ### 3. `playlists`
 Stores user playlists.
 
-| Column       | Type        | Description         |
-|--------------|-------------|---------------------|
-| `id`         | Integer     | Primary key         |
-| `user_id`    | Integer     | Reference to `users`|
-| `song_id`    | Integer     | Reference to `songs`|
+| Column        | Type        | Description         |
+|---------------|-------------|---------------------|
+| `id`          | Integer     | Primary key         |
+| `user_id`     | Integer     | Reference to `users`|
+| `song_id`     | Integer     | Reference to `songs`|
 
 > You can also add more tables like `genres`, `song_ratings`, or `favorites` if needed for extended functionality.
 
@@ -61,4 +63,4 @@ Stores user playlists.
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/your-username/atala-music-bot.git
+   git clone https://github.com/MrHojiakbar/Atala-Music_BOT

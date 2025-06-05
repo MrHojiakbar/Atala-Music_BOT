@@ -6,6 +6,7 @@ import { session, Scenes } from 'telegraf';
 import { BotModule } from './bot/bot.module';
 import { AddToPlaylistScene } from './bot/Scenes/add-to-playlist.scene';
 import { MongooseModule } from '@nestjs/mongoose';
+import { MusicModule } from './modules/music/music.module';
 
 const stage = new Scenes.Stage<Scenes.SceneContext>([new AddToPlaylistScene()]);
 
@@ -18,6 +19,7 @@ const stage = new Scenes.Stage<Scenes.SceneContext>([new AddToPlaylistScene()]);
       middlewares: [session(), stage.middleware()],
     }),
     BotModule,
+    MusicModule
   ],
   providers: [AddToPlaylistScene], 
 })
