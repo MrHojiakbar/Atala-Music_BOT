@@ -1,4 +1,3 @@
-// app.module.ts
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { TelegrafModule } from 'nestjs-telegraf';
@@ -7,20 +6,23 @@ import { BotModule } from './bot/bot.module';
 import { AddToPlaylistScene } from './bot/Scenes/add-to-playlist.scene';
 import { MongooseModule } from '@nestjs/mongoose';
 import { MusicModule } from './modules/music/music.module';
-
-const stage = new Scenes.Stage<Scenes.SceneContext>([new AddToPlaylistScene()]);
+import { UserModule } from './modules/user/user.module';
+import { PlaylistModule } from './modules/playlist/playlist.module';
+import { authMiddleware } from './bot';
 
 @Module({
   imports: [
-    MongooseModule.forRoot(process.env.MONGO_URL as string),
     ConfigModule.forRoot({ isGlobal: true }),
+    MongooseModule.forRoot(process.env.MONGO_URL as string),
     TelegrafModule.forRoot({
       token: process.env.BOT_TOKEN!,
-      middlewares: [session(), stage.middleware()],
+      middlewares: [session(),authMiddleware],
+      include: [BotModule], // Faqat asosiy BotModuleni include qiling
     }),
     BotModule,
-    MusicModule
+    MusicModule,
+    UserModule,
+    PlaylistModule,
   ],
-  providers: [AddToPlaylistScene], 
 })
 export class AppModule {}

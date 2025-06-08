@@ -31,17 +31,18 @@ Stores user information.
 
 | Column        | Type        | Description         |
 |---------------|-------------|---------------------|
-| `id`          | Integer     | Primary key         |
+| `id`          | String      | Primary key         |
 | `username`    | String      | Telegram username   |
 | `phone_number`| String      | Telegram username   |
+| `playlist_id` | String      | Playlist id         |
 | `created_at`  | Timestamp   | Registration date   |
 
-### 2. `songs`
+### 2. `musics`
 Stores available songs.
 
 | Column        | Type        | Description         |
 |---------------|-------------|---------------------|
-| `id`          | Integer     | Primary key         |
+| `id`          | String      | Primary key         |
 | `name`        | String      | Song name           |
 | `author`      | String      | Author name         |
 | `genre`       | String      | Song genre          |
@@ -53,11 +54,21 @@ Stores user playlists.
 
 | Column        | Type        | Description         |
 |---------------|-------------|---------------------|
-| `id`          | Integer     | Primary key         |
-| `user_id`     | Integer     | Reference to `users`|
-| `song_id`     | Integer     | Reference to `songs`|
+| `id`          | String      | Primary key         |
+| `name'        | String      | Playlist name       |
+| `user_id`     | String      | Reference to `users`|
+| `music_id`    | String      | Reference to `songs`|
 
-> You can also add more tables like `genres`, `song_ratings`, or `favorites` if needed for extended functionality.
+### 4. `song_ratings`
+Stores user playlists.
+
+| Column        | Type        | Description         |
+|---------------|-------------|---------------------|
+| `id`          | String      | Primary key         |
+| `music_id`    | String      | Reference to `users`|
+| `likes`       | number      | music likes         |
+| `dislikes`    | number      | music dislikes      |
+
 
 ## 🚀 Getting Started
 

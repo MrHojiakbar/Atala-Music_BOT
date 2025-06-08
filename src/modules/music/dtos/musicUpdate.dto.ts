@@ -1,19 +1,4 @@
-import { MusicGenres } from "../enums"
-import {IsEnum, IsString} from 'class-validator'
+import { PartialType } from "@nestjs/swagger"
+import { CreateMusicDto } from "./musicCreate.dto"
 
-export class UpdateMusicDto{
-    @IsString()
-    name:string
-
-    @IsString()
-    url:string
-
-    @IsString()
-    author:string
-
-    @IsEnum(MusicGenres)
-    genre:MusicGenres
-
-    @IsString()
-    uploaded_by:string
-}
+export class UpdateMusicDto extends PartialType(CreateMusicDto) {}

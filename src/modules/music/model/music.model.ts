@@ -2,7 +2,7 @@ import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose";
 import mongoose from "mongoose";
 import { MusicGenres } from "../enums";
 
-@Schema()
+@Schema({timestamps:true,versionKey:false})
 export class Music {
     @Prop({ type: mongoose.SchemaTypes.String, required: true })
     name: string;
