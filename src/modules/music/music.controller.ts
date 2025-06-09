@@ -7,6 +7,7 @@ import {
   Param,
   Body,
   NotFoundException,
+  Patch,
 } from '@nestjs/common';
 import { MusicService } from './music.service';
 import { CreateMusicDto, UpdateMusicDto } from './dtos';
@@ -34,7 +35,7 @@ export class MusicController {
     return this.musicService.createMusic(dto);
   }
 
-  @Put(':id')
+  @Patch(':id')
   async update(@Param('id') id: string, @Body() dto: UpdateMusicDto) {
     const result = await this.musicService.updateMusic(id, dto);
     if (!result.data) {

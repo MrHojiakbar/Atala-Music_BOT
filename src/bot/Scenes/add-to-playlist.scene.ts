@@ -2,13 +2,18 @@ import { Scene, SceneEnter, On, Ctx } from 'nestjs-telegraf';
 import { saveAudioFile, toValidObjectId } from 'src/helpers';
 import { MusicService } from 'src/modules/music/music.service';
 import { PLaylistService } from 'src/modules/playlist';
+import { UserService } from 'src/modules/user';
 import { MyContext } from 'src/types';
 import { Scenes } from 'telegraf';
 
 @Scene('add-to-playlist')
 export class AddToPlaylistScene extends Scenes.BaseScene<MyContext> {
-  constructor(private readonly musicService: MusicService,private readonly playlistService:PLaylistService) {
-    super('add-to-playlist'); 
+  constructor(
+    private readonly musicService: MusicService,
+    private readonly playlistService: PLaylistService,
+    private readonly userService: UserService,
+  ) {
+    super('add-to-playlist');
   }
 
   @SceneEnter()
@@ -17,30 +22,61 @@ export class AddToPlaylistScene extends Scenes.BaseScene<MyContext> {
   }
 
   @On('audio')
-  async onAudio(@Ctx() ctx: MyContext & {scene:{state:{playlistName}}} ) {
+  async onAudio(
+    @Ctx() ctx: MyContext & { scene: { state: { playlistName } } },
+  ) {
     try {
-      const audio:any = ctx.message.audio;
+      const audio: any = ctx.message.audio;
       const playlistName = ctx.scene.state.playlistName;
       if (audio.file_size >= 10 * 1024 * 1024) {
         await ctx.reply('❌ Music max size is 10 MB');
         return;
       }
-      
+
       await ctx.reply('📥 Music being saved ...');
       const fileId = audio.file_id;
       const fileLink = await ctx.telegram.getFileLink(fileId);
       const newMusic = await saveAudioFile(fileId, fileLink.href);
-      let userId=((ctx.session as any).user._id).toString()
-      const createdMusic=await this.musicService.createMusic({name:(audio.title as string),url:(newMusic as any).filePath,uploaded_by:userId})
-      let musicId:any=((await createdMusic).data._id).toString()
-      const createdPlaylist=await this.playlistService.create({name:playlistName,user_id:userId,music_id:[musicId]})
-      console.log(createdMusic);
-      console.log(createdPlaylist);
-      
-      await ctx.reply(`✅ ${audio.title} has been added to your playlist: ${playlistName}.`);
+      let userId = (ctx.session as any).user._id.toString();
+      let { data } = await this.playlistService.getOneByName(
+        playlistName,
+        userId,
+      );
+      if (data) {
+        const createdMusic = await this.musicService.createMusic({
+          name: audio.title as string,
+          url: (newMusic as any).filePath,
+          uploaded_by: userId,
+        });
+        let musicId: any = (await createdMusic).data._id.toString();
+        data.music_id.push(musicId);
+        await this.playlistService.update(data._id.toString(), data as any);
+      } else {
+        const createdMusic = await this.musicService.createMusic({
+          name: audio.title as string,
+          url: (newMusic as any).filePath,
+          uploaded_by: userId,
+        });
+        let musicId: any = (await createdMusic).data._id.toString();
+        const playlist = await this.playlistService.create({
+          name: playlistName,
+          user_id: userId,
+          music_id: [musicId],
+        });
+        const foundedUser = await this.userService.getById(userId);
+        const userPL = foundedUser.data?.playlist_id==null?[]:foundedUser.data?.playlist_id;
+        userPL?.push(playlist.data._id.toString());
+        await this.userService.update(userId, { playlist_id: userPL as any });
+      }
+
+      await ctx.reply(
+        `✅ ${audio.title} has been added to your playlist: ${playlistName}.`,
+      );
       await ctx.scene.leave();
     } catch (err) {
-      await ctx.reply('Sorry, server error occurred. Please wait 5 minutes and try again.');
+      await ctx.reply(
+        'Sorry, server error occurred. Please wait 5 minutes and try again.',
+      );
       console.error(err);
     }
   }

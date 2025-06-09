@@ -18,14 +18,14 @@ export class UserService{
     }
 
     async getById(id:string) {
-        const user=await this.model.findById(id)
+        const user=await this.model.findById(id).populate('playlist_id')
         return {
             message:"success",
             data:user
         }
     }
     async getByUserName(username:string) {
-        const foundedUser=await this.model.findOne({username})
+        const foundedUser=await this.model.findOne({username}).populate('playlist_id')
         return {
             message:"success",
             data:foundedUser
@@ -41,7 +41,9 @@ export class UserService{
     }
 
     async update(id:string,data:UpdateUserDto) {
-        const updatedUser=this.model.findByIdAndUpdate(id,data,{
+        console.log(data);
+        
+        const updatedUser=await this.model.findByIdAndUpdate(id,data,{
             new:true,
             runValidators:true
         })
@@ -51,7 +53,7 @@ export class UserService{
         }
     }
     async delete(id:string) {
-        const deletedUser=this.model.findByIdAndDelete(id)
+        const deletedUser=await this.model.findByIdAndDelete(id)
         return{
             message:"success",
             data:deletedUser

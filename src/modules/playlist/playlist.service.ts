@@ -19,7 +19,14 @@ export class PLaylistService{
     }
 
     async getOneById(id:string) {
-        const playlist =  await this.model.findById(id)
+        const playlist =  await this.model.findById(id).populate("music_id")
+        return {
+            message:"success",
+            data:playlist
+        }
+    }
+    async getOneByName(name:string,user_id:string) {
+        const playlist =  await this.model.findOne({name,user_id})
         return {
             message:"success",
             data:playlist
@@ -34,22 +41,24 @@ export class PLaylistService{
         }
     }
 
-    async update (id:string,data:UpdatePlaylistDto) {
-        const updatedPlaylist=this.model.findByIdAndUpdate(id,data,{
-            new:true,
-            runValidators:true
-        })
+    async update(id: string, data: UpdatePlaylistDto) {
+        
+        const updatedPlaylist = await this.model.findByIdAndUpdate(id, data, {
+            new: true,
+            runValidators: true
+        });
         return {
-            message:"success",
-            data:updatedPlaylist
-        }
+            message: "success",
+            data: updatedPlaylist
+        };
     }
 
-    async delete(id:string) {
-        const deletedPlaylist=this.model.findByIdAndDelete(id)
+    async delete(id: string) {
+        const deletedPlaylist = await this.model.findByIdAndDelete(id);
         return {
-            message:"success",
-            data:deletedPlaylist
-        }
+            message: "success",
+            data: deletedPlaylist
+        };
     }
+
 }

@@ -9,8 +9,8 @@ export class User {
     @Prop({type:mongoose.SchemaTypes.String,required:true})
     phone_number:string;
 
-    @Prop({type:mongoose.SchemaTypes.String,ref:"Playlist"})
-    playlist_id:string;
+    @Prop({type:mongoose.SchemaTypes.Array,ref:"PLaylist"})
+    playlist_id:string[];
 
 }
 

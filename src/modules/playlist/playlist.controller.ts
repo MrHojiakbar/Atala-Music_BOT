@@ -7,6 +7,7 @@ import {
   Param,
   Body,
   NotFoundException,
+  Patch,
 } from '@nestjs/common';
 import { PLaylistService } from './playlist.service';
 import { CreatePlaylistDto, UpdatePlaylistDto } from './dtos';
@@ -34,7 +35,7 @@ export class PlaylistController {
     return this.playlistService.create(dto);
   }
 
-  @Put(':id')
+  @Patch(':id')
   async update(@Param('id') id: string, @Body() dto: UpdatePlaylistDto) {
     const result = await this.playlistService.update(id, dto);
     if (!result.data) {

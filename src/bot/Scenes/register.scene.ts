@@ -36,7 +36,7 @@ export class RegisterScene {
     const dto: CreateUserDto = {
       username,
       phone_number,
-      playlist_id: '',
+      playlist_id: null,
     };
 
     const user:any = await this.userService.create(dto);

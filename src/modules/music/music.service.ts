@@ -3,6 +3,7 @@ import { Music } from "./model/music.model";
 import { InjectModel } from "@nestjs/mongoose";
 import { Model } from "mongoose";
 import { CreateMusicDto, UpdateMusicDto } from "./dtos";
+import { MusicGenres } from "./enums";
 
 @Injectable()
 export class MusicService {
@@ -23,6 +24,14 @@ export class MusicService {
         return {
             message:"success",
             data:music
+        }
+    }
+    async getByGenre(genre:MusicGenres) {
+        const musics=await this.model.find({genre}).exec()
+        return {
+            message:"success",
+            count:musics.length,
+            data:musics
         }
     }
 

@@ -12,6 +12,6 @@ export class CreatePlaylistDto{
     user_id:Types.ObjectId
 
     @IsString()
-    @ApiProperty({name:"playlist_id",example:'["507f191e810c19729de860ea"]'})
+    @ApiProperty({name:"music_id",example:'["507f191e810c19729de860ea"]'})
     music_id:Types.ObjectId[]
 }

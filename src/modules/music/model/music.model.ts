@@ -16,6 +16,7 @@ export class Music {
     @Prop({
         type: String,
         enum: Object.values(MusicGenres),
+        default:null
     })
     genre: MusicGenres;
 

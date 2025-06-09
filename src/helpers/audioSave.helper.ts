@@ -6,7 +6,7 @@ export async function saveAudioFile(fileId: string, href: string) {
     return new Promise((resolve, reject) => {
 
         const fileName = `${fileId}-${Date.now()}.mp3`;
-        const filePath = join(process.cwd(), 'static', 'music', fileName);
+        const filePath = join(process.cwd(), 'uploads', 'music', fileName);
         mkdirSync(dirname(filePath), { recursive: true });
 
         const file = createWriteStream(filePath);
