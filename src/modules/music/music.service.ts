@@ -26,6 +26,19 @@ export class MusicService {
             data:music
         }
     }
+    async getByName(name:string) {
+        console.log(name);
+        
+        const musics=await this.model.find({
+        name: { $regex: new RegExp(`^${name}`, 'i') }
+    })
+        console.log(musics);
+        
+        return {
+            message:'success',
+            data:musics
+        }
+    }
     async getByGenre(genre:MusicGenres) {
         const musics=await this.model.find({genre}).exec()
         return {

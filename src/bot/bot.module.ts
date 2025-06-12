@@ -9,13 +9,17 @@ import { RegisterScene } from './Scenes/register.scene';
 import { MusicModule } from 'src/modules/music/music.module';
 import { PLaylistService } from 'src/modules/playlist';
 import { PlaylistModule } from 'src/modules/playlist/playlist.module';
+import { LikeModule } from 'src/modules/like/like.module';
+import { DislikeModule } from 'src/modules/dislike/dislike.module';
 
 @Module({
   imports: [
     MongooseModule.forFeature([{ name: 'Music', schema: MusicSchema }]),
     MusicModule,
     UserModule,
-    PlaylistModule
+    PlaylistModule,
+    LikeModule,
+    DislikeModule
   ],
   providers: [BotUpdate,AddToPlaylistScene,RegisterScene],
 })

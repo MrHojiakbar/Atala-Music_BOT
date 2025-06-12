@@ -31,7 +31,11 @@ export class RegisterScene {
     }
 
     const phone_number = contact.phone_number;
-    const username = from.username;
+    let username = from.username;
+
+    if (!username) {
+      username = `user_${from.id}`;
+    }
 
     const dto: CreateUserDto = {
       username,

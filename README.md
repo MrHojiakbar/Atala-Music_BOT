@@ -59,7 +59,7 @@ Stores user playlists.
 | `user_id`     | String      | Reference to `users`|
 | `music_id`    | String      | Reference to `songs`|
 
-### 4. `song_ratings`
+### 4. `music_ratings`
 Stores user playlists.
 
 | Column        | Type        | Description         |

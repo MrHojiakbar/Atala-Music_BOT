@@ -9,6 +9,8 @@ import { MusicModule } from './modules/music/music.module';
 import { UserModule } from './modules/user/user.module';
 import { PlaylistModule } from './modules/playlist/playlist.module';
 import { authMiddleware } from './bot';
+import { LikeModule } from './modules/like/like.module';
+import { DislikeModule } from './modules/dislike/dislike.module';
 
 @Module({
   imports: [
@@ -17,12 +19,14 @@ import { authMiddleware } from './bot';
     TelegrafModule.forRoot({
       token: process.env.BOT_TOKEN!,
       middlewares: [session(),authMiddleware],
-      include: [BotModule], // Faqat asosiy BotModuleni include qiling
+      include: [BotModule], 
     }),
     BotModule,
     MusicModule,
     UserModule,
     PlaylistModule,
+    LikeModule,
+    DislikeModule
   ],
 })
 export class AppModule {}

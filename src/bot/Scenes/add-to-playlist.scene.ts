@@ -27,6 +27,8 @@ export class AddToPlaylistScene extends Scenes.BaseScene<MyContext> {
   ) {
     try {
       const audio: any = ctx.message.audio;
+      console.log(audio);
+      
       const playlistName = ctx.scene.state.playlistName;
       if (audio.file_size >= 10 * 1024 * 1024) {
         await ctx.reply('❌ Music max size is 10 MB');
@@ -44,7 +46,7 @@ export class AddToPlaylistScene extends Scenes.BaseScene<MyContext> {
       );
       if (data) {
         const createdMusic = await this.musicService.createMusic({
-          name: audio.title as string,
+          name: audio.title as string || audio.file_name.split('.')[0],
           url: (newMusic as any).filePath,
           uploaded_by: userId,
         });
@@ -52,8 +54,10 @@ export class AddToPlaylistScene extends Scenes.BaseScene<MyContext> {
         data.music_id.push(musicId);
         await this.playlistService.update(data._id.toString(), data as any);
       } else {
+        console.log(audio.file_name.split('.')[0]);
+        
         const createdMusic = await this.musicService.createMusic({
-          name: audio.title as string,
+          name: audio.title as string || audio.file_name.split('.')[0],
           url: (newMusic as any).filePath,
           uploaded_by: userId,
         });
@@ -70,7 +74,7 @@ export class AddToPlaylistScene extends Scenes.BaseScene<MyContext> {
       }
 
       await ctx.reply(
-        `✅ ${audio.title} has been added to your playlist: ${playlistName}.`,
+        `✅ ${audio.title || audio.file_name.split('.')[0]} has been added to your playlist: ${playlistName}.`,
       );
       await ctx.scene.leave();
     } catch (err) {
