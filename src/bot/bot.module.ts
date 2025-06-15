@@ -11,6 +11,7 @@ import { PLaylistService } from 'src/modules/playlist';
 import { PlaylistModule } from 'src/modules/playlist/playlist.module';
 import { LikeModule } from 'src/modules/like/like.module';
 import { DislikeModule } from 'src/modules/dislike/dislike.module';
+import { HttpModule } from '@nestjs/axios';
 
 @Module({
   imports: [
@@ -19,7 +20,8 @@ import { DislikeModule } from 'src/modules/dislike/dislike.module';
     UserModule,
     PlaylistModule,
     LikeModule,
-    DislikeModule
+    DislikeModule,
+    HttpModule
   ],
   providers: [BotUpdate,AddToPlaylistScene,RegisterScene],
 })

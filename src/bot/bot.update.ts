@@ -1,13 +1,17 @@
+import { HttpService } from '@nestjs/axios';
 import { Command, Ctx, Help, On, Start, Update } from 'nestjs-telegraf';
+import { exec } from 'node:child_process';
 import * as fs from 'node:fs';
-import { join } from 'node:path';
+import { get } from 'node:http';
+import { join, resolve } from 'node:path';
 import { sendPlaylistPage } from 'src/helpers';
+import { sendYouTubeResults } from 'src/helpers/sendYoutubeM.helper';
 import { MusicDislikeService } from 'src/modules/dislike/dislike.service';
 import { MusicLikeService } from 'src/modules/like/like.service';
 import { MusicGenres } from 'src/modules/music/enums';
 import { MusicService } from 'src/modules/music/music.service';
 import { PLaylistService } from 'src/modules/playlist';
-import { UserService } from 'src/modules/user';
+import { UserService, YOUTUBEuserID } from 'src/modules/user';
 import { Markup, Scenes } from 'telegraf';
 import { InlineKeyboardButton } from 'telegraf/typings/core/types/typegram';
 
@@ -19,10 +23,10 @@ export class BotUpdate {
     private readonly userService: UserService,
     private readonly playlistService: PLaylistService,
     private readonly musicService: MusicService,
-    private readonly likeService:MusicLikeService,
-    private readonly dislikeService:MusicDislikeService
+    private readonly likeService: MusicLikeService,
+    private readonly dislikeService: MusicDislikeService,
+    private readonly httpService: HttpService,
   ) {}
-
   @Start()
   async Start(
     @Ctx() ctx: MyContext & { session: { isLoggedIn: boolean; user } },
@@ -37,7 +41,7 @@ export class BotUpdate {
         _id: getUserByUsername.data._id,
         username: getUserByUsername.data.username,
       };
-      console.log('this user already login');
+      ('this user already login');
     }
 
     const imagePath = join(
@@ -52,12 +56,13 @@ export class BotUpdate {
       {
         caption: `Hi👋 ${user.first_name}, Welcome to Atala-Music! 🎶\nPossible Commands 👇:
     /start – Start the bot  
-    /search <name> – Search for a song  
+    /search – name Search for a song  
     /genre – Browse by genre  
+    /popular - Get popular songs
     /register – Register account
     /myplaylist – View your personal playlist  
-    /addtoplaylist <name> – Add a song to your playlist  
-    /playlist <user> – View another user’s playlist  
+    /addtoplaylist– name Add a song to your playlist  
+    /playlist – user View another user’s playlist  
     /help – Show this help message`,
       },
     );
@@ -73,12 +78,13 @@ export class BotUpdate {
 You can control me using the following commands:
 
 /start – Start the bot  
-/search <name> – Search for a song  
+/search – name Search for a song  
 /genre – Browse by genre  
+/popular - Get popular songs
 /register – Register account
 /myplaylist – View your personal playlist  
-/addtoplaylist <name> – Add a song to your playlist  
-/playlist <user> – View another user’s playlist  
+/addtoplaylist– name Add a song to your playlist  
+/playlist – user View another user’s playlist  
 /help – Show this help message`);
   }
 
@@ -103,9 +109,10 @@ You can control me using the following commands:
     if (getUserByUsername.data) {
       ctx.session.isLoggedIn = true;
       ctx.session.user = {
-        _id: getUserByUsername.data._id,
+        _id: getUserByUsername.data._id.toString(),
         username: getUserByUsername.data.username,
       };
+
       ctx.reply('✅ You are already registered. Logged in successfully.');
       return;
     }
@@ -119,7 +126,7 @@ You can control me using the following commands:
       await ctx.reply('Register to unlock this command! 😉👇\n/register');
       return;
     }
-    console.log(userId);
+    userId;
     const getUser = await this.userService.getById(userId);
 
     const getUserPlaylists = getUser.data?.playlist_id;
@@ -151,7 +158,6 @@ You can control me using the following commands:
   @Command('playlist')
   async getPlaylistUser(@Ctx() ctx: MyContext) {
     const message: any = ctx.message;
-    console.log(message);
 
     const username: string = message.text.split(' ')[1];
     if (!username) {
@@ -160,7 +166,6 @@ You can control me using the following commands:
     }
     const { data } = await this.userService.getByUserName(username);
     let playlists: any = data?.playlist_id;
-    console.log(data);
     if (playlists === null || playlists == '') {
       ctx.reply('This user not registered or dont have playlist');
       return;
@@ -176,46 +181,66 @@ You can control me using the following commands:
       await ctx.reply('Please give music name for search !❌');
       return;
     }
-    const { data: musics } = await this.musicService.getByName(searchText);
-    console.log(musics);
+    await sendYouTubeResults(ctx, searchText, this.httpService);
+  }
+  @Command('popular')
+  async getPopularMusics(@Ctx() ctx: MyContext) {
+    const musics = await this.musicService.getTopRatedMusics();
+    if (!musics || musics.length == 0) {
+      ctx.reply('Popular Musics is empty!');
+      return;
+    }
+    let page = 1;
+    const limit = 5;
+    const offset = (page - 1) * limit;
 
-    const page = 1;
-    const pageSize = 5;
-    const totalPages = Math.ceil(musics.length / pageSize);
-    const startIndex = (page - 1) * pageSize;
-    const endIndex = startIndex + pageSize;
-    const currentlyMusic = musics.slice(startIndex, endIndex);
-    console.log(currentlyMusic);
-
-    let message = `🎵 Music (Page ${page}/${totalPages}):\n`;
-    currentlyMusic.forEach((music, i) => {
-      message += `${startIndex + i + 1}. ${music.name}\n`;
-    });
-
-    const buttons: InlineKeyboardButton[][] = [[], []];
-
-    if (page > 1) {
-      buttons[1].push({
-        text: '⬅️ Previous',
-        callback_data: `music_page_${page - 1}`,
-      });
+    try {
+      if (ctx.callbackQuery?.message?.message_id) {
+        await ctx.telegram.deleteMessage(
+          (ctx as any).chat.id,
+          ctx.callbackQuery.message.message_id,
+        );
+      }
+    } catch (err) {
+      console.error('❌ deleteMessage error:', err);
     }
 
-    currentlyMusic.forEach((music, i) => {
-      buttons[0].push({
-        text: `${i + 1}`,
-        callback_data: `music_id_${String(music._id)}`,
-      });
-    });
+    let message = `🎵 Music In Popular Songs (Page ${page})\n\n`;
+    let buttons: { text: string; callback_data: string }[][] = [[]];
 
-    if (page < totalPages) {
-      buttons[1].push({
-        text: 'Next ➡️',
-        callback_data: `music_page_${page + 1}`,
+    const paginatedMusics = musics.slice(offset, offset + limit);
+    let count = offset + 1;
+
+    for (const musicId of paginatedMusics) {
+      const { data: musicData } =
+        await this.musicService.getOneByIdMusic(musicId);
+      message += `${count}. ${musicData?.name}\n`;
+      buttons[0].push({
+        text: String(count),
+        callback_data: `music_id_${musicData?._id}`,
       });
+      count++;
+    }
+
+    let navigationButtons: { text: string; callback_data: string }[] = [];
+    if (page > 1) {
+      navigationButtons.push({
+        text: '⬅️ Previous',
+        callback_data: `popular_${page - 1}`,
+      });
+    }
+    if (offset + limit < musics.length) {
+      navigationButtons.push({
+        text: 'Next ➡️',
+        callback_data: `popular_${page + 1}`,
+      });
+    }
+    if (navigationButtons.length > 0) {
+      buttons.push(navigationButtons);
     }
 
     await ctx.reply(message, {
+      parse_mode: 'Markdown',
       reply_markup: {
         inline_keyboard: buttons,
       },
@@ -249,7 +274,11 @@ You can control me using the following commands:
       sendPlaylistPage(ctx as any, playlists, page);
     }
     if (data.startsWith('playlist_id')) {
-      const playlistId = data.split('_').pop();
+      const [__, _, playlistId, pageNum] = data.split('_');
+      let page = Number(pageNum || 1);
+      const limit = 5;
+      const offset = (page - 1) * limit;
+
       const playlist = await this.playlistService.getOneById(playlistId);
       const musics = playlist.data?.music_id;
 
@@ -258,34 +287,64 @@ You can control me using the following commands:
         return;
       }
 
-      await ctx.answerCbQuery();
-      await ctx.deleteMessage();
-      let message = `Music In Playlist ${playlist.data?.name}\n\n`;
-      let buttons: { text: string; callback_data: string }[] = [];
-      let count = 1;
-      for (const musicId of musics) {
+      // 🔻 Oldingi xabarni o‘chirishga urinish
+      try {
+        if (ctx.callbackQuery?.message?.message_id) {
+          await ctx.telegram.deleteMessage(
+            (ctx as any).chat.id,
+            ctx.callbackQuery.message.message_id,
+          );
+        }
+      } catch (err) {
+        console.error('❌ deleteMessage error:', err);
+      }
+
+      let message = `🎵 Music In Playlist *${playlist.data?.name}* (Page ${page})\n\n`;
+      let buttons: { text: string; callback_data: string }[][] = [[]];
+
+      const paginatedMusics = musics.slice(offset, offset + limit);
+      let count = offset + 1;
+
+      for (const musicId of paginatedMusics) {
         const { data: musicData } =
           await this.musicService.getOneByIdMusic(musicId);
         message += `${count}. ${musicData?.name}\n`;
-        buttons.push({
-          text: String(count) || 'Unknown',
+        buttons[0].push({
+          text: String(count),
           callback_data: `music_id_${musicData?._id}`,
         });
-        count += 1;
+        count++;
       }
 
-      const inlineKeyboard = buttons.map((button) => [button]);
+      let navigationButtons: { text: string; callback_data: string }[] = [];
+      if (page > 1) {
+        navigationButtons.push({
+          text: '⬅️ Previous',
+          callback_data: `playlist_id_${playlistId}_${page - 1}`,
+        });
+      }
+      if (offset + limit < musics.length) {
+        navigationButtons.push({
+          text: 'Next ➡️',
+          callback_data: `playlist_id_${playlistId}_${page + 1}`,
+        });
+      }
+      if (navigationButtons.length > 0) {
+        buttons.push(navigationButtons);
+      }
+
       await ctx.reply(message, {
+        parse_mode: 'Markdown',
         reply_markup: {
-          inline_keyboard: inlineKeyboard,
+          inline_keyboard: buttons,
         },
       });
     }
     if (data.startsWith('music_id')) {
+      const userId = ctx.session?.user?._id;
 
-      const userId = (ctx.session?.user?._id).toString();
       if (!userId) {
-        await ctx.answerCbQuery('Please register first.');
+        await ctx.reply('Register to unlock this command! 😉👇\n/register');
         return;
       }
       const musicId = data.split('_').pop();
@@ -300,15 +359,15 @@ You can control me using the following commands:
                 Markup.button.callback('Like 👍', `like_${musicId}_${userId}`),
                 Markup.button.callback(
                   'Dislike 👎',
-                  `dislike_${musicId}_${userId}`
+                  `dislike_${musicId}_${userId}`,
                 ),
               ],
               [
                 Markup.button.callback(
                   'Add to Playlist 🗂️',
-                  `addplaylist_${musicId}_${userId}`
+                  `addplaylist_${musicId}_${userId}`,
                 ),
-              ]
+              ],
             ],
           },
         },
@@ -323,7 +382,6 @@ You can control me using the following commands:
       const startIndex = (page - 1) * pageSize;
       const endIndex = startIndex + pageSize;
       const currentlyMusic = musics.slice(startIndex, endIndex);
-      console.log(currentlyMusic);
 
       let message = `🎵 Music (Page ${page}/${totalPages}):\n`;
       currentlyMusic.forEach((music, i) => {
@@ -360,16 +418,328 @@ You can control me using the following commands:
       });
     }
     if (data.startsWith('like_')) {
-      const [_,music_id,user_id]=data.split('_')
-      const {data:music}=await this.musicService.getOneByIdMusic(music_id)
-      await this.likeService.create({music_id,user_id})
-      await ctx.reply(`You liked music ${music?.name} ❤️`)
+      const [_, music_id, user_id] = data.split('_');
+
+      if (user_id == 'undefined') {
+        await ctx.reply('Register to unlock this command! 😉👇\n/register');
+        return;
+      }
+      const { data: music } = await this.musicService.getOneByIdMusic(music_id);
+      await this.likeService.create({ music_id, user_id });
+      await ctx.reply(`You liked music ${music?.name} ❤️`);
     }
     if (data.startsWith('dislike_')) {
-      const [_,music_id,user_id]=data.split('_')
-      const {data:music}=await this.musicService.getOneByIdMusic(music_id)
-      await this.dislikeService.create({music_id,user_id})
-      await ctx.reply(`You disliked music ${music?.name} 👎`)
+      const [_, music_id, user_id] = data.split('_');
+
+      if (user_id == 'undefined') {
+        await ctx.reply('Register to unlock this command! 😉👇\n/register');
+        return;
+      }
+      const { data: music } = await this.musicService.getOneByIdMusic(music_id);
+      await this.dislikeService.create({ music_id, user_id });
+      await ctx.reply(`You disliked music ${music?.name} 👎`);
+    }
+    if (data.startsWith(`addplaylist_id_`)) {
+      const parts = data.split('_');
+      ('keldi');
+
+      if (parts.length !== 4) {
+        await ctx.answerCbQuery('Invalid data format.');
+        return;
+      }
+      const music_id = parts[2];
+      const playlist_id = parts[3];
+
+      const { data: playlist } =
+        await this.playlistService.getOneById(playlist_id);
+
+      if (!playlist) {
+        await ctx.answerCbQuery('Playlist not found.');
+        return;
+      }
+
+      if (!playlist.music_id) {
+        playlist.music_id = [];
+      }
+      if (!playlist.music_id.includes(music_id)) {
+        playlist.music_id.push(music_id);
+      } else {
+        await ctx.answerCbQuery('This music is already in the playlist.');
+        return;
+      }
+
+      if (typeof playlist.save === 'function') {
+        await playlist.save();
+      } else {
+        await this.playlistService.update(playlist_id, {
+          music_id: playlist.music_id as any,
+        });
+      }
+
+      await ctx.answerCbQuery();
+      await ctx.reply(
+        `Music successfully saved to your playlist "${playlist.name}" ✅`,
+      );
+      return;
+    }
+    if (data.startsWith('addplaylist_')) {
+      const [_, music_id, userId] = data.split('_');
+
+      if (userId == 'undefined') {
+        await ctx.reply('Register to unlock this command! 😉👇\n/register');
+        return;
+      }
+
+      const { data: getUser } = await this.userService.getById(userId);
+      if (!getUser) {
+        await ctx.reply('Register to unlock this command! 😉👇\n/register');
+        return;
+      }
+      const playlists: any = getUser.playlist_id;
+      if (!playlists) {
+        await ctx.reply(
+          'Your playlists is empty. Add songs with /addtoplaylist command.',
+        );
+        return;
+      }
+      const page = 1;
+
+      const pageSize = 5;
+      const totalPages = Math.ceil(playlists.length / pageSize);
+      const startIndex = (page - 1) * pageSize;
+      const endIndex = startIndex + pageSize;
+      const currentPlaylists = playlists.slice(startIndex, endIndex);
+      currentPlaylists;
+
+      let message = `🎵 Playlists (Page ${page}/${totalPages}):\n`;
+      currentPlaylists.forEach((pl, i) => {
+        message += `${startIndex + i + 1}. ${pl.name}\n`;
+      });
+
+      const buttons: InlineKeyboardButton[][] = [[], []];
+
+      if (page > 1) {
+        buttons[1].push({
+          text: '⬅️ Previous',
+          callback_data: `playlist_page_${page - 1}`,
+        });
+      }
+
+      currentPlaylists.forEach((pl, i) => {
+        buttons[0].push({
+          text: `${i + 1}`,
+          callback_data: `addplaylist_id_${music_id}_${String(pl._id)}`,
+        });
+      });
+
+      if (page < totalPages) {
+        buttons[1].push({
+          text: 'Next ➡️',
+          callback_data: `playlist_page_${page + 1}`,
+        });
+      }
+
+      await ctx.reply(message, {
+        reply_markup: {
+          inline_keyboard: buttons,
+        },
+      });
+    }
+
+    if (data.startsWith('select_')) {
+      data;
+
+      let [_, video_id, video_index, userId] = data.split('_');
+      video_index = Number(video_index);
+      try {
+        await ctx.answerCbQuery('⏳ Downloading audio... Please wait', {
+          show_alert: true,
+        });
+
+        const musicPath = join(process.cwd(), 'uploads', 'music');
+        if (!fs.existsSync(musicPath)) {
+          fs.mkdirSync(musicPath, { recursive: true });
+        }
+        const musicTitle =
+          ctx.session.youTubeResults[video_index].snippet.title || 'Unknown';
+        const outputPath = resolve(musicPath, `${video_id}-${Date.now()}.mp3`);
+        const user_id = userId;
+
+        const { data: foundedMusic } =
+          await this.musicService.getByName(musicTitle);
+        if (foundedMusic) {
+          ctx.replyWithAudio(
+            { source: fs.createReadStream(foundedMusic?.url as any) },
+            {
+              title: foundedMusic.name,
+              reply_markup: {
+                inline_keyboard: [
+                  [
+                    Markup.button.callback(
+                      'Like 👍',
+                      `like_${foundedMusic._id}_${user_id}`,
+                    ),
+                    Markup.button.callback(
+                      'Dislike 👎',
+                      `dislike_${foundedMusic._id}_${user_id}`,
+                    ),
+                  ],
+                  [
+                    Markup.button.callback(
+                      'Add to Playlist 🗂️',
+                      `addplaylist_${foundedMusic._id}_${user_id}`,
+                    ),
+                  ],
+                ],
+              },
+            },
+          );
+        } else {
+          const { data: newMusic } = await this.musicService.createMusic({
+            url: outputPath,
+            uploaded_by: YOUTUBEuserID,
+            name: musicTitle,
+          });
+
+          await new Promise((resolve, reject) => {
+            exec(
+              `yt-dlp -x --audio-format mp3 -o "${outputPath}" "https://www.youtube.com/watch?v=${video_id}"`,
+              { timeout: 120000 },
+              (error, stdout, stderr) => {
+                if (error) {
+                  console.error('Download error:', error);
+                  console.error('stderr:', stderr);
+                  reject(error);
+                  return;
+                }
+                resolve(stdout);
+              },
+            );
+          });
+
+          if (!fs.existsSync(outputPath)) {
+            throw new Error('Audio file not created');
+          }
+
+          await ctx.replyWithAudio(
+            { source: fs.createReadStream(outputPath) },
+            {
+              title: musicTitle,
+              caption: `The world is more beautiful with @AtalaMusicBot 👍`,
+              reply_markup: {
+                inline_keyboard: [
+                  [
+                    Markup.button.callback(
+                      'Like 👍',
+                      `like_${newMusic._id}_${user_id}`,
+                    ),
+                    Markup.button.callback(
+                      'Dislike 👎',
+                      `dislike_${newMusic._id}_${user_id}`,
+                    ),
+                  ],
+                  [
+                    Markup.button.callback(
+                      'Add to Playlist 🗂️',
+                      `addplaylist_${newMusic._id}_${user_id}`,
+                    ),
+                  ],
+                ],
+              },
+            },
+          );
+        }
+      } catch (error) {
+        console.error('Audio download error:', error);
+        await ctx.answerCbQuery('❌ Failed to download audio');
+        await ctx.reply(
+          'Sorry, there was an error downloading the audio. Please try again later.',
+        );
+
+        const tempFile = resolve(
+          __dirname,
+          '..',
+          '..',
+          'temp',
+          `${video_id}.mp3`,
+        );
+        if (fs.existsSync(tempFile)) {
+          fs.unlinkSync(tempFile);
+        }
+      }
+    }
+    if (data.startsWith('navigate_')) {
+      const [_, query, pageToken, ds] = data.split('_');
+      await sendYouTubeResults(
+        ctx as any,
+        query,
+        this.httpService,
+        pageToken,
+        ds,
+      );
+    }
+    if (data.startsWith('popular_')) {
+      const [_, pageNum] = data.split('_');
+      const musics = await this.musicService.getTopRatedMusics();
+      if (!musics || musics.length == 0) {
+        ctx.reply('Popular Musics is empty!');
+        return;
+      }
+      let page = Number(pageNum || 1);
+      const limit = 5;
+      const offset = (page - 1) * limit;
+
+      try {
+        if (ctx.callbackQuery?.message?.message_id) {
+          await ctx.telegram.deleteMessage(
+            (ctx as any).chat.id,
+            ctx.callbackQuery.message.message_id,
+          );
+        }
+      } catch (err) {
+        console.error('❌ deleteMessage error:', err);
+      }
+
+      let message = `🎵 Music In Popular Songs (Page ${page})\n\n`;
+      let buttons: { text: string; callback_data: string }[][] = [[]];
+
+      const paginatedMusics = musics.slice(offset, offset + limit);
+      let count = offset + 1;
+
+      for (const musicId of paginatedMusics) {
+        const { data: musicData } =
+          await this.musicService.getOneByIdMusic(musicId);
+        message += `${count}. ${musicData?.name}\n`;
+        buttons[0].push({
+          text: String(count),
+          callback_data: `music_id_${musicData?._id}`,
+        });
+        count++;
+      }
+
+      let navigationButtons: { text: string; callback_data: string }[] = [];
+      if (page > 1) {
+        navigationButtons.push({
+          text: '⬅️ Previous',
+          callback_data: `popular_${page - 1}`,
+        });
+      }
+      if (offset + limit < musics.length) {
+        navigationButtons.push({
+          text: 'Next ➡️',
+          callback_data: `popular_${page + 1}`,
+        });
+      }
+      if (navigationButtons.length > 0) {
+        buttons.push(navigationButtons);
+      }
+
+      await ctx.reply(message, {
+        parse_mode: 'Markdown',
+        reply_markup: {
+          inline_keyboard: buttons,
+        },
+      });
     }
   }
 }

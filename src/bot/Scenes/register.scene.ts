@@ -51,6 +51,9 @@ export class RegisterScene {
       username: user.data.username,
       phone_number: user.data.phone_number,
     };
+    console.log(user);
+    console.log('Scene reg',ctx.session.user)
+    
 
     await ctx.reply(`✅ Congratulations, @${username}, you have successfully registered!`);
     await ctx.scene.leave();
